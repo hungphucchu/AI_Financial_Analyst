@@ -327,7 +327,7 @@
       document.getElementById('send-btn').disabled = true;
 
       try {
-        const res = await fetch(`${API}/query`, {
+        const res = await fetch(`${API}/query/stream`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -336,19 +336,48 @@
           body: JSON.stringify({ question }),
         });
 
-        statusEl.remove();
-
-        const text = await res.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = null; }
-
         if (!res.ok) {
+          statusEl.remove();
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); } catch { data = null; }
           const detail = data ? (data.detail || JSON.stringify(data)) : `HTTP ${res.status}: ${text.substring(0, 200)}`;
           addMessage(detail, 'error');
-        } else if (data && data.answer) {
-          addMessage(data.answer, 'bot');
         } else {
-          addMessage(`Unexpected response: ${text.substring(0, 300)}`, 'error');
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let answerEl = null;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              if (line.startsWith('event: status')) {
+                const dataLine = lines[lines.indexOf(line) + 1];
+                if (dataLine && dataLine.startsWith('data: ')) {
+                  statusEl.textContent = dataLine.substring(6);
+                }
+              } else if (line.startsWith('data: ') && !line.startsWith('data: Planning') && !line.startsWith('data: Complete')) {
+                const content = line.substring(6);
+                if (content && content.length > 5) {
+                  statusEl.remove();
+                  if (!answerEl) answerEl = addMessage(content, 'bot');
+                  else answerEl.textContent = content;
+                }
+              }
+            }
+          }
+
+          if (!answerEl) {
+            statusEl.remove();
+            addMessage('No response received.', 'error');
+          }
         }
       } catch (e) {
         statusEl.remove();
