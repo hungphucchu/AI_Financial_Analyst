@@ -1,0 +1,16 @@
+# Don't ship dev artifacts or secrets into the Docker image
+tf-env-39/
+.env
+secrets/
+chroma_db/
+data/
+__pycache__/
+.pytest_cache/
+.git/
+.gitignore
+.cursor/
+*.md
+tests/
+evaluation/
+*.pyc
+.DS_Store

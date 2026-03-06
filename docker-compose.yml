@@ -1,0 +1,37 @@
+# docker-compose up              — run with .env (local dev)
+# docker-compose --profile prod up — run with Docker secrets
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - chroma_data:/app/chroma_db
+
+  app-prod:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    secrets:
+      - google_api_key
+      - tavily_api_key
+      - jwt_secret
+    volumes:
+      - chroma_data:/app/chroma_db
+    profiles: ["prod"]
+
+secrets:
+  google_api_key:
+    file: ./secrets/google_api_key
+  tavily_api_key:
+    file: ./secrets/tavily_api_key
+  jwt_secret:
+    file: ./secrets/jwt_secret
+
+volumes:
+  chroma_data:

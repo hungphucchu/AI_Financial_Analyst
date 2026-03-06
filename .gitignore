@@ -1,0 +1,39 @@
+# Virtual environment
+tf-env-39/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment / secrets
+.env
+secrets/
+
+# ChromaDB (generated data, re-create with: python main.py ingest)
+chroma_db/
+
+# Sample PDFs (generated, re-create with: python main.py generate)
+data/
+
+# Pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cursor
+.cursor/
+note.txt
+architecture.txt

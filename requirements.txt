@@ -1,0 +1,37 @@
+# RAG & LLM
+llama-index-core
+llama-index-llms-google-genai
+llama-index-embeddings-google-genai
+llama-index-vector-stores-chroma
+llama-index-readers-file
+
+# Google Gemini SDK
+google-generativeai
+google-genai
+
+# Agent Orchestration
+langgraph
+langchain-core
+
+# Tools
+tavily-python
+
+# Vector Database
+chromadb
+
+# Data Processing
+pypdf
+reportlab
+
+# Web API
+fastapi
+uvicorn[standard]
+sse-starlette
+PyJWT
+
+# Utilities
+python-dotenv
+
+# Testing
+pytest
+httpx
