@@ -96,13 +96,19 @@ class AgentNodes:
         """
         print("\n[Synthesizer] Generating response...")
 
+        role = state.get("role", "intern")
         tool_text = "\n\n".join(
             f"[{name.upper()}]: {output}"
             for name, output in state["tool_outputs"].items()
         )
 
+        role_context = (
+            f"The user's role is: {role}. "
+            f"{'They have full access to all documents including confidential ones.' if role == 'admin' else 'They only have access to PUBLIC documents. Confidential memos, CEO communications, and internal strategy docs are restricted to admin users.'}"
+        )
+
         answer = self.llm.generate(
-            prompt=f"User question: {state['query']}\n\nTool outputs:\n{tool_text}",
+            prompt=f"User question: {state['query']}\n\n{role_context}\n\nTool outputs:\n{tool_text}",
             system=SYNTHESIZER_SYSTEM_PROMPT,
         )
         return {"final_answer": answer}
