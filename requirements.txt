@@ -4,6 +4,7 @@ llama-index-llms-google-genai
 llama-index-embeddings-google-genai
 llama-index-vector-stores-chroma
 llama-index-readers-file
+llama-index-workflows
 
 # Google Gemini SDK
 google-generativeai
