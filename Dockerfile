@@ -1,14 +1,14 @@
 
 
 #  install dependencies 
-FROM python:3.9-slim AS builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# production image 
-FROM python:3.9-slim
+# production image
+FROM python:3.11-slim
 
 WORKDIR /app
 

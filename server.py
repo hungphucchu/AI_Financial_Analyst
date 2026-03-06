@@ -13,9 +13,36 @@ Usage (Docker / Cloud Run):
     The Dockerfile CMD runs: uvicorn server:app --host 0.0.0.0 --port $PORT
 """
 
-from config.settings import Settings
-from api.financial_analyst_api import FinancialAnalystAPI
+import logging
+import sys
 
-settings = Settings.from_env()
-api = FinancialAnalystAPI(settings)
-app = api.app
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger(__name__)
+
+try:
+    from config.settings import Settings
+    from api.financial_analyst_api import FinancialAnalystAPI
+
+    settings = Settings.from_env()
+    api = FinancialAnalystAPI(settings)
+    app = api.app
+    logger.info("Application initialized successfully")
+
+except Exception as e:
+    logger.error("FATAL: Failed to initialize application: %s", e, exc_info=True)
+
+    from fastapi import FastAPI
+    app = FastAPI()
+    startup_error = str(e)
+
+    @app.get("/health")
+    def health():
+        return {"status": "error", "detail": startup_error}
+
+    @app.get("/")
+    def root():
+        return {"status": "error", "detail": startup_error}
