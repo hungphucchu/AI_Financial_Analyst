@@ -138,7 +138,13 @@ class FinancialAnalystAPI:
             if injection:
                 raise HTTPException(status_code=400, detail=injection)
 
-            answer = agent.run(req.question, role=role)
+            try:
+                answer = agent.run(req.question, role=role)
+            except RuntimeError as e:
+                if "quota" in str(e).lower() or "retries" in str(e).lower():
+                    answer = "The Gemini API rate limit has been reached. Please wait 1-2 minutes and try again."
+                else:
+                    raise HTTPException(status_code=500, detail=str(e))
             return QueryResponse(answer=answer, role=role, question=req.question)
 
         @app.post("/query/stream")
@@ -153,12 +159,20 @@ class FinancialAnalystAPI:
             async def event_generator():
                 yield {"event": "status", "data": "Planning..."}
 
-                loop = asyncio.get_running_loop()
-                run_fn = partial(agent.run, req.question, role=role)
-                answer = await loop.run_in_executor(None, run_fn)
+                try:
+                    loop = asyncio.get_running_loop()
+                    run_fn = partial(agent.run, req.question, role=role)
+                    answer = await loop.run_in_executor(None, run_fn)
 
-                yield {"event": "status", "data": "Complete"}
-                yield {"event": "answer", "data": answer}
+                    yield {"event": "status", "data": "Complete"}
+                    yield {"event": "answer", "data": answer}
+                except RuntimeError as e:
+                    if "quota" in str(e).lower() or "retries" in str(e).lower():
+                        yield {"event": "answer", "data": "The Gemini API rate limit has been reached. Please wait 1-2 minutes and try again. The free tier allows ~15 requests per minute."}
+                    else:
+                        yield {"event": "answer", "data": f"Error: {e}"}
+                except Exception as e:
+                    yield {"event": "answer", "data": f"An error occurred: {e}"}
 
             return EventSourceResponse(event_generator())
 

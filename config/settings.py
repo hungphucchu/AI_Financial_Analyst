@@ -45,11 +45,11 @@ class Settings:
     data_public_dir: str = "./data/public"
     data_confidential_dir: str = "./data/confidential"
 
-    max_retries: int = 4
-    retry_base_delay: int = 5
-    retry_max_delay: int = 60
+    max_retries: int = 6
+    retry_base_delay: int = 10
+    retry_max_delay: int = 120
     ingestion_batch_size: int = 10
-    inter_tool_delay: float = 2.0
+    inter_tool_delay: float = 3.0
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000
