@@ -24,7 +24,6 @@ from sse_starlette.sse import EventSourceResponse
 from api.models import (
     LoginRequest, LoginResponse,
     QueryRequest, QueryResponse,
-    HealthResponse,
 )
 from api.jwt_auth_service import JwtAuthService
 from api.prompt_guardrail import PromptGuardrail
@@ -163,10 +162,25 @@ class FinancialAnalystAPI:
 
             return EventSourceResponse(event_generator())
 
-        @app.get("/health", response_model=HealthResponse)
+        @app.get("/health")
         def health():
-            """Health check — returns 200 if the server is running."""
-            return HealthResponse(status="ok", version=APP_VERSION)
+            """Health check — returns 200 with data status."""
+            try:
+                from database.chroma_manager import ChromaManager
+                db = ChromaManager(self.settings)
+                collection = db.get_collection()
+                doc_count = collection.count()
+                data_ready = doc_count > 0
+            except Exception:
+                doc_count = 0
+                data_ready = False
+
+            return {
+                "status": "ok",
+                "version": APP_VERSION,
+                "data_ready": data_ready,
+                "document_chunks": doc_count,
+            }
 
         app.mount("/static", StaticFiles(directory="static"), name="static")
 

@@ -338,16 +338,21 @@
 
         statusEl.remove();
 
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+
         if (!res.ok) {
-          const data = await res.json();
-          addMessage(data.detail || 'Request failed', 'error');
-        } else {
-          const data = await res.json();
+          const detail = data ? (data.detail || JSON.stringify(data)) : `HTTP ${res.status}: ${text.substring(0, 200)}`;
+          addMessage(detail, 'error');
+        } else if (data && data.answer) {
           addMessage(data.answer, 'bot');
+        } else {
+          addMessage(`Unexpected response: ${text.substring(0, 300)}`, 'error');
         }
       } catch (e) {
         statusEl.remove();
-        addMessage('Connection error. Is the server running?', 'error');
+        addMessage(`Network error: ${e.message}`, 'error');
       }
 
       document.getElementById('send-btn').disabled = false;
