@@ -170,6 +170,36 @@
       color: var(--muted);
       font-size: 13px;
       padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top: 2px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
     }
 
     .input-bar {
@@ -323,7 +353,7 @@
       input.value = '';
       addMessage(question, 'user');
 
-      const statusEl = addMessage('Thinking...', 'status');
+      const statusEl = addStatus('AI is analyzing your question');
       document.getElementById('send-btn').disabled = true;
 
       try {
@@ -361,7 +391,13 @@
               if (line.startsWith('event: status')) {
                 const dataLine = lines[lines.indexOf(line) + 1];
                 if (dataLine && dataLine.startsWith('data: ')) {
-                  statusEl.textContent = dataLine.substring(6);
+                  const status = dataLine.substring(6);
+                  const label = statusEl.querySelector('.status-label');
+                  if (label) {
+                    if (status === 'Planning...') label.textContent = 'Searching documents and planning';
+                    else if (status === 'Complete') label.textContent = 'Preparing your answer';
+                    else label.textContent = status;
+                  }
                 }
               } else if (line.startsWith('data: ') && !line.startsWith('data: Planning') && !line.startsWith('data: Complete')) {
                 const content = line.substring(6);
@@ -392,6 +428,16 @@
       const el = document.createElement('div');
       el.className = `message msg-${type}`;
       el.textContent = text;
+      const container = document.getElementById('messages');
+      container.appendChild(el);
+      container.scrollTop = container.scrollHeight;
+      return el;
+    }
+
+    function addStatus(text) {
+      const el = document.createElement('div');
+      el.className = 'message msg-status';
+      el.innerHTML = `<span class="spinner"></span><span class="status-label">${text}</span><span class="dots"></span>`;
       const container = document.getElementById('messages');
       container.appendChild(el);
       container.scrollTop = container.scrollHeight;
