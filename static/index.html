@@ -253,12 +253,69 @@
     }
 
     .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    #splash-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .splash-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .splash-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .splash-status {
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-track {
+      width: 280px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #a855f7);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
   </style>
 </head>
 <body>
 
+  <!-- Splash / Loading -->
+  <div id="splash-screen">
+    <div class="splash-icon">$</div>
+    <div class="splash-title">AI Financial Analyst</div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="splash-status"><span class="spinner"></span><span id="splash-text">Connecting to server</span><span class="dots"></span></div>
+  </div>
+
   <!-- Login -->
-  <div id="login-screen">
+  <div id="login-screen" style="display:none;">
     <div class="login-card">
       <h2>Financial Analyst</h2>
       <div class="form-group">
@@ -298,6 +355,46 @@
     let token = null;
     let role = null;
     const API = window.location.origin;
+
+    (async function initApp() {
+      const bar = document.getElementById('progress-fill');
+      const text = document.getElementById('splash-text');
+      bar.style.width = '20%';
+
+      const maxAttempts = 30;
+      let ready = false;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        try {
+          const res = await fetch(`${API}/health`);
+          const data = await res.json();
+          bar.style.width = '60%';
+          text.textContent = 'Loading AI models';
+
+          if (data.data_ready) {
+            bar.style.width = '90%';
+            text.textContent = 'Almost ready';
+            ready = true;
+            break;
+          }
+
+          if (data.status === 'ok') {
+            bar.style.width = '70%';
+            text.textContent = 'Preparing financial data';
+          }
+        } catch (_) {
+          text.textContent = 'Waiting for server';
+        }
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      bar.style.width = '100%';
+      text.textContent = ready ? 'Ready' : 'Server is up';
+      await new Promise(r => setTimeout(r, 400));
+
+      document.getElementById('splash-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    })();
 
     async function login() {
       const username = document.getElementById('username').value;
