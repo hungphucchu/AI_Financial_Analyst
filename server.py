@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Try to start the real application (settings, API, agent pipeline).
 try:
     from config.settings import Settings
     from api.financial_analyst_api import FinancialAnalystAPI
@@ -33,6 +34,11 @@ try:
     logger.info("Application initialized successfully")
 
 except Exception as e:
+    # Fallback: if initialization fails (missing API key, bad import, etc.),
+    # start a minimal server that exposes the error via /health and /.
+    # Without this, the container would crash silently on Cloud Run and you'd
+    # only see "container failed to start" with no explanation.
+    # The fallback still binds to the port, so Cloud Run doesn't kill it.
     logger.error("FATAL: Failed to initialize application: %s", e, exc_info=True)
 
     from fastapi import FastAPI

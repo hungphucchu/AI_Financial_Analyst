@@ -82,5 +82,7 @@ class FinancialAnalystAgent:
             "iteration": 0,
         }
 
+        # Run the full pipeline: Planner → Tool Executor → Synthesizer.
+        # Returns the final state dict with all fields filled in.
         result = self.graph.invoke(initial_state)
         return result["final_answer"]

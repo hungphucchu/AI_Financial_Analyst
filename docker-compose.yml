@@ -1,16 +1,22 @@
-# docker-compose up              — run with .env (local dev)
-# docker-compose --profile prod up — run with Docker secrets
+# docker-compose up                — run with .env (local dev)
+# docker-compose --profile prod up — run with Docker secrets (production-like)
 
 services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - chroma_data:/app/chroma_db
 
+  # LOCAL DEV: loads secrets from .env file (simple, plain text).
+  # Access at http://localhost:8000
+  app:
+    build: .                         # build image from Dockerfile
+    ports:
+      - "8000:8000"                  # container:8000 → localhost:8000
+    env_file:
+      - .env                         # secrets from .env (QWEN_API_KEY, etc.)
+    volumes:
+      - chroma_data:/app/chroma_db   # persist ChromaDB data between restarts
+
+  # PRODUCTION-LIKE: secrets mounted as files at /run/secrets/<name>
+  # instead of .env. More secure — not plain text in environment variables.
+  # Only starts with: docker-compose --profile prod up
   app-prod:
     build: .
     ports:
@@ -18,20 +24,24 @@ services:
     environment:
       - PORT=8000
     secrets:
-      - google_api_key
-      - tavily_api_key
-      - jwt_secret
+      - qwen_api_key                 # mounted at /run/secrets/qwen_api_key
+      - tavily_api_key               # mounted at /run/secrets/tavily_api_key
+      - jwt_secret                   # mounted at /run/secrets/jwt_secret
     volumes:
       - chroma_data:/app/chroma_db
-    profiles: ["prod"]
+    profiles: ["prod"]               # hidden by default, opt-in only
 
+# Where Docker reads the secret files from on your machine.
+# Each file contains just the raw secret value (no key=value format).
 secrets:
-  google_api_key:
-    file: ./secrets/google_api_key
+  qwen_api_key:
+    file: ./secrets/qwen_api_key
   tavily_api_key:
     file: ./secrets/tavily_api_key
   jwt_secret:
     file: ./secrets/jwt_secret
 
+# Named volume so ChromaDB data survives docker-compose down/up.
+# Without this, all ingested documents are lost when the container stops.
 volumes:
   chroma_data:

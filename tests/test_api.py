@@ -1,4 +1,4 @@
-"""Tests for FastAPI endpoints using TestClient (no real Gemini calls)."""
+"""Tests for FastAPI endpoints using TestClient (no real LLM calls)."""
 
 import pytest
 from unittest.mock import patch, MagicMock
@@ -10,7 +10,7 @@ from api.financial_analyst_api import FinancialAnalystAPI
 @pytest.fixture
 def settings():
     return Settings(
-        google_api_key="test-key",
+        qwen_api_key="test-key",
         jwt_secret="test-jwt-secret",
         jwt_expiry_hours=1,
     )

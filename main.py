@@ -5,6 +5,7 @@ CLI entry point. Run one of:
     python main.py peek       — inspect what's in the vector store
     python main.py chat       — interactive terminal chat
     python main.py serve      — start the FastAPI web server
+    python main.py eval       — run the automated evaluation suite
 """
 
 import sys
@@ -74,12 +75,21 @@ def cmd_serve(settings: Settings) -> None:
     uvicorn.run(api.app, host=settings.api_host, port=settings.api_port)
 
 
+def cmd_eval(settings: Settings) -> None:
+    from evaluation.evaluation_suite import EvaluationSuite
+    suite = EvaluationSuite(settings)
+    results = suite.run()
+    failed = sum(1 for r in results if not r.passed)
+    sys.exit(1 if failed else 0)
+
+
 COMMANDS = {
     "generate": cmd_generate,
     "ingest": cmd_ingest,
     "peek": cmd_peek,
     "chat": cmd_chat,
     "serve": cmd_serve,
+    "eval": cmd_eval,
 }
 
 

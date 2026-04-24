@@ -1,14 +1,15 @@
 # RAG & LLM
-llama-index-core
-llama-index-llms-google-genai
-llama-index-embeddings-google-genai
-llama-index-vector-stores-chroma
-llama-index-readers-file
-llama-index-workflows
+llama-index-core<0.13
+llama-index-llms-openai<0.4
+llama-index-llms-openai-like<0.4
+llama-index-embeddings-huggingface<0.6
+llama-index-vector-stores-chroma<0.5
+llama-index-readers-file<0.5
+llama-index-workflows<2
 
-# Google Gemini SDK
-google-generativeai
-google-genai
+# Qwen-compatible client
+openai
+sentence-transformers
 
 # Agent Orchestration
 langgraph
@@ -21,6 +22,7 @@ tavily-python
 chromadb
 
 # Data Processing
+numpy<2
 pypdf
 reportlab
 

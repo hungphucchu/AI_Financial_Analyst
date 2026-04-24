@@ -8,7 +8,7 @@ from api.jwt_auth_service import JwtAuthService
 @pytest.fixture
 def settings():
     return Settings(
-        google_api_key="test-key",
+        qwen_api_key="test-key",
         jwt_secret="test-secret-key",
         jwt_algorithm="HS256",
         jwt_expiry_hours=1,
@@ -66,7 +66,7 @@ class TestJWT:
     def test_wrong_secret_rejected(self, auth):
         token = auth.create_token("admin", "admin")
         wrong_settings = Settings(
-            google_api_key="test",
+            qwen_api_key="test",
             jwt_secret="wrong-secret",
         )
         wrong_auth = JwtAuthService(wrong_settings)

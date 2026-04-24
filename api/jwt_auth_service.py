@@ -118,6 +118,8 @@ class JwtAuthService:
             if the token is valid, or None if it's expired or tampered with.
         """
         try:
+            # jwt.decode() verifies signature (not tampered?), checks expiration
+            # (not expired?), and validates format (valid JWT structure?).
             payload = jwt.decode(
                 token,
                 self.settings.jwt_secret,
@@ -125,6 +127,6 @@ class JwtAuthService:
             )
             return payload
         except jwt.ExpiredSignatureError:
-            return None
+            return None  # token's "exp" is in the past
         except jwt.InvalidTokenError:
-            return None
+            return None  # bad signature, bad format, or any other JWT error

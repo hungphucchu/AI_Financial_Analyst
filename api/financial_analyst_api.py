@@ -142,38 +142,49 @@ class FinancialAnalystAPI:
                 answer = agent.run(req.question, role=role)
             except RuntimeError as e:
                 if "quota" in str(e).lower() or "retries" in str(e).lower():
-                    answer = "The Gemini API rate limit has been reached. Please wait 1-2 minutes and try again."
+                    answer = "The Qwen API rate limit has been reached. Please wait 1-2 minutes and try again."
                 else:
                     raise HTTPException(status_code=500, detail=str(e))
             return QueryResponse(answer=answer, role=role, question=req.question)
 
+        # SSE streaming endpoint — sends events to the browser in real time
+        # instead of waiting for the full answer. Frontend shows status updates
+        # ("Planning...", "Complete") as they happen via EventSource.
         @app.post("/query/stream")
         async def query_stream(req: QueryRequest, authorization: str = Header(None)):
             """Stream the agent's response via Server-Sent Events (SSE)."""
-            role = self.get_role_from_token(authorization)
+            role = self.get_role_from_token(authorization)  # JWT → role
 
+            # First line of defense: block prompt injection before it reaches the LLM
             injection = guardrail.check(req.question)
             if injection:
                 raise HTTPException(status_code=400, detail=injection)
 
             async def event_generator():
-                yield {"event": "status", "data": "Planning..."}
+                yield {"event": "status", "data": "Planning..."}  # sent immediately to browser
 
                 try:
-                    loop = asyncio.get_running_loop()
-                    run_fn = partial(agent.run, req.question, role=role)
-                    answer = await loop.run_in_executor(None, run_fn)
+                    # Agent pipeline is sync (blocks 10-20s for LLM API calls).
+                    # FastAPI is async — calling agent.run() directly would freeze
+                    # the entire server for all users. run_in_executor pushes it to
+                    # a separate thread so the event loop stays free to serve others.
+                    loop = asyncio.get_running_loop()          # get the async event loop
+                    run_fn = partial(agent.run, req.question, role=role)  # package sync fn + args
+                    answer = await loop.run_in_executor(None, run_fn)    # run in thread, await result
 
                     yield {"event": "status", "data": "Complete"}
                     yield {"event": "answer", "data": answer}
                 except RuntimeError as e:
+                    # Catch "Max retries reached — Qwen quota exhausted" from gemini_client.py
                     if "quota" in str(e).lower() or "retries" in str(e).lower():
-                        yield {"event": "answer", "data": "The Gemini API rate limit has been reached. Please wait 1-2 minutes and try again. The free tier allows ~15 requests per minute."}
+                        yield {"event": "answer", "data": "The Qwen API rate limit has been reached. Please wait 1-2 minutes and try again."}
                     else:
                         yield {"event": "answer", "data": f"Error: {e}"}
                 except Exception as e:
                     yield {"event": "answer", "data": f"An error occurred: {e}"}
 
+            # EventSourceResponse keeps the HTTP connection open and sends each
+            # yielded event to the browser as it happens (Server-Sent Events).
             return EventSourceResponse(event_generator())
 
         @app.get("/health")

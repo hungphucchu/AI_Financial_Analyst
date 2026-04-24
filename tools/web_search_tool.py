@@ -5,7 +5,7 @@ Web search tool using the Tavily API for real-time financial data.
 
 from tools.base_tool import BaseTool
 from config.settings import Settings
-
+from tavily import TavilyClient
 
 class WebSearchTool(BaseTool):
     MAX_RESULTS = 3
@@ -50,7 +50,6 @@ class WebSearchTool(BaseTool):
             )
 
         try:
-            from tavily import TavilyClient
 
             client = TavilyClient(api_key=self.settings.tavily_api_key)
             response = client.search(query=tool_input, max_results=self.MAX_RESULTS)

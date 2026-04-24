@@ -7,7 +7,7 @@ from config.settings import Settings
 
 
 def _make_settings() -> Settings:
-    return Settings(google_api_key="test-key")
+    return Settings(qwen_api_key="test-key")
 
 
 class TestRBACFilterLogic:

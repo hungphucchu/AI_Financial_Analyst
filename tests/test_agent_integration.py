@@ -10,11 +10,11 @@ from agent.financial_analyst_agent import FinancialAnalystAgent
 
 
 pytestmark = pytest.mark.skipif(
-    not os.getenv("GOOGLE_API_KEY"),
-    reason="GOOGLE_API_KEY not set — skipping integration tests",
+    not os.getenv("QWEN_API_KEY"),
+    reason="QWEN_API_KEY not set — skipping integration tests",
 )
 
-DELAY = 15  # seconds between tests to respect Gemini free-tier rate limits
+DELAY = 15  # seconds between tests to respect API rate limits
 
 
 @pytest.fixture(scope="module")

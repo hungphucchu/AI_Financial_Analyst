@@ -21,12 +21,30 @@ class ChromaManager:
 
     def __init__(self, settings: Settings):
         self.settings = settings
+        # PersistentClient uses ./chroma_db/ as the database location.
+        # First run: creates the folder + chroma.sqlite3 (empty database).
+        # Subsequent runs: opens existing data — no re-ingestion needed.
         self.client = chromadb.PersistentClient(path=settings.chroma_db_path)
 
     def get_or_create_collection(self) -> chromadb.Collection:
+        # Returns the collection if it exists, creates an empty one if not.
+        # Used by the ingestion pipeline (needs to create on first run).
+        # RAGTool uses get_collection() instead, which fails if data is missing.
         return self.client.get_or_create_collection(
             self.settings.chroma_collection_name
         )
+
+    def recreate_collection(self) -> chromadb.Collection:
+        """Drop and recreate the configured collection.
+
+        Use this when switching embedding models with different vector dimensions.
+        """
+        try:
+            self.client.delete_collection(self.settings.chroma_collection_name)
+        except Exception:
+            # It's okay if collection doesn't exist yet.
+            pass
+        return self.get_or_create_collection()
 
     def get_collection(self) -> chromadb.Collection:
         """Get an existing collection. Fails clearly if it's missing.
@@ -56,6 +74,8 @@ class ChromaManager:
         Returns:
             A ChromaVectorStore that LlamaIndex can query against.
         """
+        # Adapter pattern: wraps ChromaDB collection in LlamaIndex's interface.
+        # LlamaIndex can't talk to ChromaDB directly — this is the translator.
         return ChromaVectorStore(chroma_collection=collection)
 
     def get_storage_context(self, collection: chromadb.Collection) -> StorageContext:
@@ -68,6 +88,10 @@ class ChromaManager:
             A StorageContext configured to write into the given collection.
         """
         vector_store = self.get_vector_store(collection)
+        # StorageContext tells LlamaIndex WHERE to write embedded chunks.
+        # Without it, vectors go to memory (lost on restart).
+        # With it, vectors go through the adapter into ChromaDB on disk.
+        # Used by ingestion pipeline (write). RAGTool uses get_vector_store() (read).
         return StorageContext.from_defaults(vector_store=vector_store)
 
     def peek(self, limit: int = 5) -> None:

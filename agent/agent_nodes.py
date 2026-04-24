@@ -44,10 +44,36 @@ class AgentNodes:
             prompt=f"User query: {state['query']}",
             system=PLANNER_SYSTEM_PROMPT,
         )
-        plan = GeminiClient.strip_markdown_fences(raw)
+        plan = self.extract_plan_json(raw)
 
         print(f"  Plan: {plan[:200]}")
         return {"plan": plan, "iteration": state.get("iteration", 0) + 1}
+
+    @staticmethod
+    def extract_plan_json(raw: str) -> str:
+        """Extract the planner JSON object from model output.
+
+        Qwen-family models can prepend reasoning text (e.g. <think>...</think>)
+        before the JSON payload. This helper strips markdown fences and then
+        returns the first balanced JSON object so tool parsing still works.
+        """
+        text = GeminiClient.strip_markdown_fences(raw)
+
+        start = text.find("{")
+        if start == -1:
+            return text
+
+        depth = 0
+        for idx in range(start, len(text)):
+            char = text[idx]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : idx + 1]
+
+        return text
 
     def tool_executor(self, state: AgentState) -> dict:
         """Run the tools specified in the planner's JSON plan.
@@ -61,9 +87,13 @@ class AgentNodes:
         print("\n[Tool Executor] Running tools...")
         outputs: dict = {}
 
+        # Parse the Planner's JSON string into a Python dict, then extract
+        # the list of tools to run. Falls back to [] if "tools" key is missing.
+        # If Gemini returned malformed JSON or the plan key doesn't exist,
+        # we return a clean error instead of crashing the server.
         try:
-            plan_data = json.loads(state["plan"])
-            tools_to_run = plan_data.get("tools", [])
+            plan_data = json.loads(state["plan"])  # JSON string → Python dict
+            tools_to_run = plan_data.get("tools", [])  # extract tools list, default to [] if missing
         except (json.JSONDecodeError, KeyError) as e:
             return {"tool_outputs": {"error": f"Plan parse failed: {e}"}}
 
@@ -80,6 +110,8 @@ class AgentNodes:
             outputs[tool_name.lower()] = tool.execute(
                 tool_input, role=state["role"]
             )
+            # Pause between tools (3s) to avoid hitting Gemini's rate limit
+            # when running multiple tools back-to-back (e.g. RAG → calculator → web search).
             time.sleep(self.settings.inter_tool_delay)
 
         print(f"  Completed: {list(outputs.keys())}")

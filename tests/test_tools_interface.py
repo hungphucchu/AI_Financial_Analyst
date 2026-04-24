@@ -10,7 +10,7 @@ from config.settings import Settings
 
 def _make_settings(**overrides) -> Settings:
     """Create a Settings instance with dummy API keys for interface testing."""
-    defaults = {"google_api_key": "test-key", "tavily_api_key": "test-key"}
+    defaults = {"qwen_api_key": "test-key", "tavily_api_key": "test-key"}
     defaults.update(overrides)
     return Settings(**defaults)
 

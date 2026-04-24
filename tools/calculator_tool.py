@@ -74,14 +74,20 @@ class CalculatorTool(BaseTool):
         Raises:
             ValueError: If the node type or operation isn't in the whitelist.
         """
+        # Outer wrapper from ast.parse(mode="eval") — unwrap and evaluate body
         if isinstance(node, ast.Expression):
             return self.evaluate(node.body)
 
+        # Numbers (int/float). Rejects strings or other constants.
+        # e.g. 96.8 → return 96.8
         if isinstance(node, ast.Constant):
             if isinstance(node.value, (int, float)):
                 return node.value
             raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
 
+        # Binary operations: +, -, *, /, **, %
+        # Recursively evaluates left and right, then applies the operator.
+        # e.g. 96.8 / 383.3 → evaluate(96.8)=96.8, evaluate(383.3)=383.3, truediv → 0.2524
         if isinstance(node, ast.BinOp):
             left = self.evaluate(node.left)
             right = self.evaluate(node.right)
@@ -90,6 +96,7 @@ class CalculatorTool(BaseTool):
                 raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
             return op(left, right)
 
+        # Unary operations: negative numbers. e.g. -5 → neg(5) → -5
         if isinstance(node, ast.UnaryOp):
             operand = self.evaluate(node.operand)
             op = self.SAFE_OPERATORS.get(type(node.op))
@@ -97,16 +104,21 @@ class CalculatorTool(BaseTool):
                 raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
             return op(operand)
 
+        # Function calls: only whitelisted functions (sqrt, log, round, etc.).
+        # e.g. sqrt(144) → math.sqrt(144) → 12.0
+        # Blocks dangerous calls like __import__('os') → ValueError
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in self.SAFE_FUNCTIONS:
                 args = [self.evaluate(arg) for arg in node.args]
                 return self.SAFE_FUNCTIONS[node.func.id](*args)
             raise ValueError(f"Unsupported function call: {ast.dump(node.func)}")
 
+        # Lists and tuples: needed for functions like max([10, 20, 30])
         if isinstance(node, ast.List):
             return [self.evaluate(el) for el in node.elts]
 
         if isinstance(node, ast.Tuple):
             return tuple(self.evaluate(el) for el in node.elts)
 
+        # Catchall: anything not whitelisted above is rejected
         raise ValueError(f"Unsupported expression node: {type(node).__name__}")

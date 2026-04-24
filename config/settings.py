@@ -13,14 +13,19 @@ class Settings:
 
 
     Attributes:
-        google_api_key: Required. Gemini API key for LLM and embeddings.
+        qwen_api_key: Required. Qwen API key for LLM generation.
+        qwen_base_url: OpenAI-compatible endpoint URL for Qwen API.
         tavily_api_key: Optional. Enables the web search tool for live data.
-        llm_model: Gemini model name. Changed here when Google deprecates one.
-        embedding_model: Gemini embedding model for vectorizing documents.
+        llm_model: Qwen model name for text generation.
+        embedding_model: Local sentence-transformers model name for embeddings.
+        embedding_batch_size: Batch size for local embedding generation.
+        normalize_embeddings: Whether to L2-normalize vectors before storage/query.
         llm_temperature: Lower = more deterministic. 0.1 keeps financial answers precise.
+        llm_context_window: Max input tokens the LLM can handle. Passed to OpenAILike
+            since custom endpoints don't advertise a default context size.
         chroma_db_path: Where ChromaDB stores its data on disk.
         chroma_collection_name: Name of the vector collection inside ChromaDB.
-        max_retries: How many times to retry on Gemini 429 (rate limit) errors.
+        max_retries: How many times to retry on Qwen 429 (rate limit) errors.
         retry_base_delay: Starting delay in seconds. Doubles each retry (exponential backoff).
         retry_max_delay: Cap so we don't wait forever.
         ingestion_batch_size: Small batches during embedding to avoid hitting rate limits.
@@ -32,12 +37,16 @@ class Settings:
         jwt_expiry_hours: How long a login token stays valid.
     """
 
-    google_api_key: str = ""
+    qwen_api_key: str = ""
+    qwen_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     tavily_api_key: str = ""
 
-    llm_model: str = "gemini-2.0-flash"
-    embedding_model: str = "gemini-embedding-001"
+    llm_model: str = "qwen-plus"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_batch_size: int = 64
+    normalize_embeddings: bool = True
     llm_temperature: float = 0.1
+    llm_context_window: int = 32000
 
     chroma_db_path: str = "./chroma_db"
     chroma_collection_name: str = "financial_analyst"
@@ -71,10 +80,13 @@ class Settings:
         Returns:
             The secret value as a string, stripped of whitespace.
         """
+        # Tier 1: Docker secrets (most secure, mounted as read-only files)
         secrets_path = f"/run/secrets/{name.lower()}"
         if os.path.isfile(secrets_path):
             with open(secrets_path) as f:
                 return f.read().strip()
+        # Tier 2: environment variable (Cloud Run, .env via python-dotenv)
+        # Tier 3: default value (fallback, usually empty string)
         return os.getenv(name, default)
 
     @classmethod
@@ -86,15 +98,26 @@ class Settings:
         """
         load_dotenv()
 
-        google_key = cls.resolve_secret("GOOGLE_API_KEY")
-        if not google_key:
+        qwen_key = cls.resolve_secret("QWEN_API_KEY")
+        if not qwen_key:
             raise ValueError(
-                "GOOGLE_API_KEY is required. "
-                "Set it in .env, environment, or /run/secrets/google_api_key."
+                "QWEN_API_KEY is required. "
+                "Set it in .env, environment, or /run/secrets/qwen_api_key."
             )
 
         return cls(
-            google_api_key=google_key,
+            qwen_api_key=qwen_key,
+            qwen_base_url=os.getenv(
+                "QWEN_BASE_URL",
+                "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+            ),
+            llm_model=os.getenv("QWEN_MODEL", "qwen-plus"),
+            embedding_model=os.getenv(
+                "LOCAL_EMBEDDING_MODEL",
+                "sentence-transformers/all-MiniLM-L6-v2",
+            ),
+            embedding_batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "64")),
+            normalize_embeddings=os.getenv("NORMALIZE_EMBEDDINGS", "true").lower() == "true",
             tavily_api_key=cls.resolve_secret("TAVILY_API_KEY"),
             jwt_secret=cls.resolve_secret("JWT_SECRET", "change-me-in-production"),
             api_port=int(os.getenv("PORT", "8000")),

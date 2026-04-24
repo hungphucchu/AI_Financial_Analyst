@@ -33,7 +33,7 @@ AI_Financial_Analyst/
 │   ├── __init__.py
 │   ├── agent_state.py              # AgentState — TypedDict passed between graph nodes
 │   ├── prompts.py                  # System prompts for Planner and Synthesizer
-│   ├── gemini_client.py            # GeminiClient — Gemini API calls with retry logic
+│   ├── gemini_client.py            # GeminiClient — Qwen/OpenAI-compatible API calls with retry logic
 │   ├── agent_nodes.py              # AgentNodes — planner, tool_executor, synthesizer nodes
 │   └── financial_analyst_agent.py  # FinancialAnalystAgent — LangGraph orchestration + run()
 │
@@ -77,8 +77,8 @@ AI_Financial_Analyst/
 
 | Layer              | Technology                      |
 | :----------------- | :------------------------------ |
-| LLM                | Google Gemini 2.0 Flash         |
-| Embeddings         | Gemini Embedding 001            |
+| LLM                | Qwen (via OpenAI-compatible API) |
+| Embeddings         | text-embedding-v3               |
 | RAG Framework      | LlamaIndex                      |
 | Vector Database    | ChromaDB (local, persistent)    |
 | Agent Orchestration| LangGraph                       |
@@ -104,7 +104,7 @@ pip install -r requirements.txt
 
 # Configure API keys
 cp .env.example .env
-# Edit .env with your GOOGLE_API_KEY (required) and TAVILY_API_KEY (optional)
+# Edit .env with your QWEN_API_KEY (required) and TAVILY_API_KEY (optional)
 ```
 
 ## Usage
@@ -179,7 +179,7 @@ docker-compose up --build
 
 # Production (uses Docker secrets)
 mkdir -p secrets
-echo "your-google-api-key" > secrets/google_api_key
+echo "your-qwen-api-key" > secrets/qwen_api_key
 echo "your-tavily-api-key" > secrets/tavily_api_key
 echo "your-jwt-secret-32chars-min" > secrets/jwt_secret
 docker-compose --profile prod up --build
@@ -201,10 +201,10 @@ The app loads secrets with a priority chain: **Docker secrets > environment vari
 # All unit tests (no API key needed, 77 tests)
 pytest tests/ -v --ignore=tests/test_agent_integration.py
 
-# Full test suite including integration (requires GOOGLE_API_KEY + ingested data)
+# Full test suite including integration (requires QWEN_API_KEY + ingested data)
 pytest tests/ -v -s
 
-# Evaluation suite (requires GOOGLE_API_KEY + ingested data)
+# Evaluation suite (requires QWEN_API_KEY + ingested data)
 python -m evaluation.eval_suite
 ```
 
@@ -216,16 +216,16 @@ User Query → [Planner] → [Tool Executor] → [Synthesizer] → Answer
                 │         ┌────┼────────┐
                 │         │    │        │
                 ▼         ▼    ▼        ▼
-            Gemini LLM   RAG  Calc  Web Search
+              Qwen LLM   RAG  Calc  Web Search
             (JSON plan)   │
                           ▼
                       ChromaDB
                     + RBAC Filter
 ```
 
-- **Planner**: Gemini decides which tools to call and with what inputs
+- **Planner**: Qwen decides which tools to call and with what inputs
 - **Tool Executor**: Runs selected tools, passes user role to RAG for RBAC
-- **Synthesizer**: Gemini combines tool outputs into a professional answer
+- **Synthesizer**: Qwen combines tool outputs into a professional answer
 
 ## RBAC
 
@@ -249,6 +249,6 @@ gcloud run deploy financial-analyst \
   --image gcr.io/YOUR_PROJECT_ID/financial-analyst \
   --platform managed \
   --region us-central1 \
-  --set-env-vars GOOGLE_API_KEY=your-key,TAVILY_API_KEY=your-key,JWT_SECRET=your-secret \
+  --set-env-vars QWEN_API_KEY=your-key,QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1,QWEN_MODEL=qwen-plus,TAVILY_API_KEY=your-key,JWT_SECRET=your-secret \
   --allow-unauthenticated
 ```
