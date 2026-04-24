@@ -2,8 +2,10 @@
 
 A multi-tool AI financial analyst that uses Retrieval-Augmented Generation (RAG) to answer questions from internal financial documents, enforces Role-Based Access Control (RBAC) at the vector database level, and orchestrates tools through a LangGraph stateful agent. Includes a FastAPI web layer with JWT auth, SSE streaming, prompt injection guardrails, and a chat UI — all containerized for Cloud Run deployment.
 
-Portfolio: [https://hungphucchu.github.io/AI_Financial_Analyst/](https://hungphucchu.github.io/AI_Financial_Analyst/)
-Application link: [https://ai-financial-analyst-432441845769.europe-west1.run.app/](https://ai-financial-analyst-432441845769.europe-west1.run.app/)
+## Live Links
+
+- Portfolio: [hungphucchu.github.io/AI_Financial_Analyst](https://hungphucchu.github.io/AI_Financial_Analyst/)
+- Live application: [ai-financial-analyst-432441845769.europe-west1.run.app](https://ai-financial-analyst-432441845769.europe-west1.run.app/)
 
 ## Project Structure
 
